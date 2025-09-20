@@ -7,6 +7,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -79,130 +80,139 @@ export default function SignupForm() {
   };
 
   return (
-    <Form {...form}>
-      <form className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="email">
-                Email <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input id="email" type="email" placeholder="Email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="password">
-                Password <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input id="password" type="password" placeholder="Password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="passwordConfirm"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="passwordConfirm">
-                Password Confirm <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input id="passwordConfirm" type="password" placeholder="Password Confirm" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="displayName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="displayName">
-                Display Name <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Input id="displayName" type="text" placeholder="Display Name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="role">
-                Role <span className="text-red-500">*</span>
-              </FormLabel>
-              <FormControl>
-                <Select
-                  value={form.watch("role") || ""}
-                  onValueChange={(value) => form.setValue("role", value as "USER" | "COMPANY")}
-                >
-                  <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="Role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ROLES.map((role) => (
-                      <SelectItem key={role.value} value={role.value}>
-                        {role.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {form.watch("role") === "COMPANY" && (
+    <>
+      <Form {...form}>
+        <form className="space-y-6">
           <FormField
             control={form.control}
-            name="companyName"
+            name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel htmlFor="companyName">
-                  Company Name <span className="text-red-500">*</span> (Only for Company)
+                <FormLabel htmlFor="email">
+                  Email <span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input id="companyName" type="text" placeholder="Company Name" {...field} />
+                  <Input id="email" type="email" placeholder="Email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        )}
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="password">
+                  Password <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input id="password" type="password" placeholder="Password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="passwordConfirm"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="passwordConfirm">
+                  Password Confirm <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input id="passwordConfirm" type="password" placeholder="Password Confirm" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <Button
-          type="button"
-          className="w-full"
-          onClick={() => {
-            form.handleSubmit((data) => {
-              handleSignup(data);
-            })();
-          }}
-          disabled={isLoading}
-        >
-          {isLoading ? "Signing up..." : "Sign up"}
-        </Button>
-      </form>
-    </Form>
+          <FormField
+            control={form.control}
+            name="displayName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="displayName">
+                  Display Name <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input id="displayName" type="text" placeholder="Display Name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel htmlFor="role">
+                  Role <span className="text-red-500">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Select
+                    value={form.watch("role") || ""}
+                    onValueChange={(value) => form.setValue("role", value as "USER" | "COMPANY")}
+                  >
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLES.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {form.watch("role") === "COMPANY" && (
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="companyName">
+                    Company Name <span className="text-red-500">*</span> (Only for Company)
+                  </FormLabel>
+                  <FormControl>
+                    <Input id="companyName" type="text" placeholder="Company Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => {
+              form.handleSubmit((data) => {
+                handleSignup(data);
+              })();
+            }}
+            disabled={isLoading}
+          >
+            {isLoading ? "Signing up..." : "Sign up"}
+          </Button>
+        </form>
+      </Form>
+
+      <p className="mt-6 text-center text-sm text-gray-500">
+        Already have an account?{" "}
+        <Link href="/login" className="text-blue-500">
+          Login
+        </Link>
+      </p>
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import Eye from "@/components/icons/Eye";
 import EyeSlash from "@/components/icons/EyeSlash";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
@@ -42,7 +43,6 @@ export default function LoginForm() {
       const result = await response.json();
 
       if (result?.ok) {
-        console.log("Login successful, redirecting to /company");
         toast.success(`Welcome!`);
         router.push("/company");
       } else {
@@ -104,6 +104,12 @@ export default function LoginForm() {
       <Button type="submit" className="w-full" disabled={isLoading}>
         {isLoading ? "Logging in..." : "Login"}
       </Button>
+      <p className="text-center text-sm text-gray-500">
+        Don't have an account?{" "}
+        <Link href="/sign-up" className="text-blue-500">
+          Sign up
+        </Link>
+      </p>
     </form>
   );
 }

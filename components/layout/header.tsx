@@ -1,13 +1,16 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Logo from "../icons/logo";
+import { Button } from "../ui/button";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const navItems = [
     {
@@ -42,9 +45,24 @@ export default function Header() {
             </li>
           ))}
         </ul>
-        <Link href="/login">
-          <User className="size-5" />
-        </Link>
+        <div className="flex items-center gap-10">
+          <Button variant="ghost" size="icon">
+            <User className="size-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              fetch("/api/auth/logout", {
+                method: "POST"
+              });
+              router.push("/login");
+              toast.success("Logged out");
+            }}
+          >
+            <LogOut className="size-5" />
+          </Button>
+        </div>
       </div>
     </header>
   );
