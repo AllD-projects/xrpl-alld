@@ -14,7 +14,7 @@ export async function createMPTEscrow(
   finishAfterSeconds: number = 60  // 기본 7일
 ) {
   // XRPL 시간은 2000년 1월 1일 기준 (946684800 = Unix epoch와의 차이)
-  const finishAfter = Math.floor(Date.now() / 1000) + finishAfterSeconds - 946684800 + 120;
+  const finishAfter = Math.floor(Date.now() / 1000) + finishAfterSeconds - 946684800 + 60;
   const cancelAfter = finishAfter + (60); // 추가 7일 후 취소 가능
 
   const escrowTx: Transaction = {
@@ -23,7 +23,7 @@ export async function createMPTEscrow(
     Destination: destinationAddress,
     Amount: {
       mpt_issuance_id: mptIssuanceId,
-      value: amount
+      value: Math.round(amount).toString()
     },
     FinishAfter: finishAfter,
     CancelAfter: cancelAfter,

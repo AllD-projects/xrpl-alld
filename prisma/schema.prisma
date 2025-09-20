@@ -48,6 +48,7 @@ enum PointTxnType {
   EARN
   USE
   REFUND
+  ADMIN_CREDIT
 }
 
 enum CredentialStatus {

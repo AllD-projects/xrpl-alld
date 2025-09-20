@@ -7,12 +7,11 @@ import {
   releaseEscrowedPoints,
   refundEscrowedPoints
 } from '@/lib/escrow';
-import { verifyJwt } from '@/lib/jwt';
 import {requireAuth} from "@/lib/auth";
-import { getMPTBalance } from '@/lib/mptBalance';
 import {Wallet} from "xrpl";
 import {getBalance} from "@/lib/getBalance";
 import {sendXRP} from "@/lib/payment";
+import {sendBatchXRP, BatchPaymentItem} from "@/lib/batchPayment";
 
 const prisma = new PrismaClient();
 
@@ -59,9 +58,9 @@ export async function POST(request: NextRequest) {
                 .find(b => b.currency === "MPT")?.value ?? 0
         ) || 0;
 
-        const pointsToUse = Math.min(usePoints, availablePoint) / 1000;
-        console.log(`Points to use: ${pointsToUse} (requested: ${usePoints}, available: ${availablePoint})`)
-        const finalAmount = totalAmount - pointsToUse;
+        // const pointsToUse = Math.min(usePoints, availablePoint) / 1000;
+        // console.log(`Points to use: ${pointsToUse} (requested: ${usePoints}, available: ${availablePoint})`)
+        const finalAmount = totalAmount - usePoints;
         const pointsToEarn = Math.floor(finalAmount * 0.05) / 1000;
 
         const order = await prisma.order.create({
@@ -71,44 +70,44 @@ export async function POST(request: NextRequest) {
             quantity: quantity,
             unitPriceDrops: product.priceDrops,
             totalDrops: finalAmount.toString(),
-            usePointAmt: pointsToUse.toString(),
+            usePointAmt: usePoints.toString(),
             status: 'CREATED'
           }
         });
 
-        // �x� �� Фl\ �1
-        if (pointsToUse > 0 && user.wallet?.seedCipher && product.company.wallet && globalConfig.mptIssuanceId) {
-          try {
-            const escrowResult = await createPointUsageEscrow(
-              user.wallet.seedCipher,
-              product.company.wallet.classicAddress,
-              globalConfig.mptIssuanceId,
-              pointsToUse.toString(),
-              product.returnDays
-            );
-
-            await prisma.pointEscrow.create({
-              data: {
-                accountId: userId,
-                orderId: order.id,
-                mptCode: globalConfig.mptCode,
-                issuer: user.wallet.classicAddress,
-                amountStr: pointsToUse.toString(),
-                finishAfter: escrowResult.finishAfter,
-                cancelAfter: escrowResult.cancelAfter,
-                status: 'CREATED',
-                createTx: `${escrowResult.txHash}:${escrowResult.sequence}`
-              }
-            });
-          } catch (error) {
-            console.error('Failed to create point usage escrow:', error);
-          }
-        }
+        // // �x� �� Фl\ �1
+        // if (pointsToUse > 0 && user.wallet?.seedCipher && product.company.wallet && globalConfig.mptIssuanceId) {
+        //   try {
+        //     const escrowResult = await createPointUsageEscrow(
+        //       user.wallet.seedCipher,
+        //       product.company.wallet.classicAddress,
+        //       globalConfig.mptIssuanceId,
+        //       pointsToUse.toString(),
+        //       product.returnDays
+        //     );
+        //
+        //     await prisma.pointEscrow.create({
+        //       data: {
+        //         accountId: userId,
+        //         orderId: order.id,
+        //         mptCode: globalConfig.mptCode,
+        //         issuer: user.wallet.classicAddress,
+        //         amountStr: pointsToUse.toString(),
+        //         finishAfter: escrowResult.finishAfter,
+        //         cancelAfter: escrowResult.cancelAfter,
+        //         status: 'CREATED',
+        //         createTx: `${escrowResult.txHash}:${escrowResult.sequence}`
+        //       }
+        //     });
+        //   } catch (error) {
+        //     console.error('Failed to create point usage escrow:', error);
+        //   }
+        // }
 
         return NextResponse.json({
           orderId: order.id,
           totalAmount: finalAmount,
-          pointsUsed: pointsToUse,
+          pointsUsed: usePoints,
           pointsToEarn: pointsToEarn,
           status: order.status
         });
@@ -125,6 +124,34 @@ export async function POST(request: NextRequest) {
           }
         });
 
+
+        const globalConfig = await prisma.globalConfig.findFirst({
+          include: { adminIssuerWallet: true }
+        });
+        const pointsToEarn = Math.floor(order.totalDrops * 0.05) / 1000;
+        const pointsToUse = order.usePointAmt
+
+        const escrowResult = await createPointUsageEscrow(
+            order.buyer.wallet.seedCipher,
+            order.product.company.wallet.classicAddress,
+            globalConfig.mptIssuanceId,
+            pointsToUse.toString(),
+            order.product.returnDays
+        );
+
+        await prisma.pointEscrow.create({
+          data: {
+            accountId: order.buyer.id,
+            orderId: order.id,
+            mptCode: globalConfig.mptCode,
+            issuer: order.buyer.wallet.classicAddress,
+            amountStr: pointsToUse.toString(),
+            finishAfter: escrowResult.finishAfter,
+            cancelAfter: escrowResult.cancelAfter,
+            status: 'CREATED',
+            createTx: `${escrowResult.txHash}:${escrowResult.sequence}`
+          }
+        });
 
         if (!order || order.status !== 'CREATED') {
           return NextResponse.json(
@@ -143,10 +170,6 @@ export async function POST(request: NextRequest) {
               { status: 502 },
           );
         }
-
-        const globalConfig = await prisma.globalConfig.findFirst({
-          include: { adminIssuerWallet: true }
-        });
 
         await prisma.$transaction(async (tx) => {
           await tx.payment.create({
@@ -427,6 +450,140 @@ export async function POST(request: NextRequest) {
           message: 'Order refunded successfully',
           refundedPoints: order.usePointAmt
         });
+      }
+
+      case 'batch': {
+        const { orders } = params; // orders: Array<{productId: string, quantity: number}>
+
+        if (!Array.isArray(orders) || orders.length === 0) {
+          return NextResponse.json(
+            { error: 'Orders array is required and must not be empty' },
+            { status: 400 }
+          );
+        }
+
+        const user = await prisma.account.findUnique({
+          where: { id: userId },
+          include: { wallet: true }
+        });
+
+        if (!user || !user.wallet) {
+          return NextResponse.json(
+            { error: 'User or wallet not found' },
+            { status: 400 }
+          );
+        }
+
+        // 모든 상품 정보 조회
+        const productIds = orders.map(order => order.productId);
+        const products = await prisma.product.findMany({
+          where: { id: { in: productIds } },
+          include: { company: { include: { wallet: true } } }
+        });
+
+        if (products.length !== productIds.length) {
+          return NextResponse.json(
+            { error: 'Some products not found' },
+            { status: 400 }
+          );
+        }
+
+        // 주문 생성 및 결제 정보 준비
+        const createdOrders = [];
+        const batchPayments: BatchPaymentItem[] = [];
+
+        for (const orderReq of orders) {
+          const product = products.find(p => p.id === orderReq.productId);
+          if (!product) continue;
+
+          const totalAmount = parseInt(product.priceDrops) * orderReq.quantity;
+
+          const order = await prisma.order.create({
+            data: {
+              buyerId: userId,
+              productId: orderReq.productId,
+              quantity: orderReq.quantity,
+              unitPriceDrops: product.priceDrops,
+              totalDrops: totalAmount.toString(),
+              usePointAmt: "0",
+              status: 'CREATED'
+            }
+          });
+
+          createdOrders.push(order);
+
+          // 배치 결제 항목 추가
+          batchPayments.push({
+            destination: product.company.wallet!.classicAddress,
+            amount: totalAmount.toString()
+          });
+        }
+
+        try {
+          // 배치 결제 실행
+          const batchResult = await sendBatchXRP(user.wallet.seedCipher!, batchPayments);
+
+          if (!batchResult.success) {
+            // 결제 실패시 생성된 주문들 삭제
+            await prisma.order.deleteMany({
+              where: { id: { in: createdOrders.map(o => o.id) } }
+            });
+            return NextResponse.json(
+              { error: 'Batch payment failed' },
+              { status: 502 }
+            );
+          }
+
+          // 모든 주문 상태를 PAID로 업데이트
+          await prisma.$transaction(async (tx) => {
+            for (let i = 0; i < createdOrders.length; i++) {
+              const order = createdOrders[i];
+
+              await tx.payment.create({
+                data: {
+                  orderId: order.id,
+                  currency: 'XRP',
+                  amountDrops: order.totalDrops,
+                  payerAddr: user.wallet!.classicAddress,
+                  payTxHash: batchResult.txHash,
+                  status: 'PAID'
+                }
+              });
+
+              await tx.order.update({
+                where: { id: order.id },
+                data: { status: 'PAID' }
+              });
+
+              await tx.orderEvent.create({
+                data: {
+                  orderId: order.id,
+                  type: 'PAYMENT_RECEIVED',
+                  note: `Batch payment received: ${order.totalDrops} drops`
+                }
+              });
+            }
+          });
+
+          return NextResponse.json({
+            success: true,
+            message: 'Batch order created and payment processed successfully',
+            orderIds: createdOrders.map(o => o.id),
+            txHash: batchResult.txHash,
+            totalOrders: createdOrders.length
+          });
+
+        } catch (error) {
+          console.error('Batch order error:', error);
+          // 결제 실패시 생성된 주문들 삭제
+          await prisma.order.deleteMany({
+            where: { id: { in: createdOrders.map(o => o.id) } }
+          });
+          return NextResponse.json(
+            { error: 'Batch order processing failed' },
+            { status: 500 }
+          );
+        }
       }
 
       default:

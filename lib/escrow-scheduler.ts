@@ -11,12 +11,16 @@ export async function processExpiredEscrows() {
   console.log('🔄 Processing expired escrows...');
 
   const now = new Date();
+  const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
 
-  // 해제 가능한 에스크로 조회
+  console.log(`Current time (local): ${now.toISOString()}`);
+  console.log(`Current time (UTC): ${utcNow.toISOString()}`);
+
+  // 해제 가능한 에스크로 조회 (UTC 기준)
   const readyEscrows = await prisma.pointEscrow.findMany({
     where: {
       status: 'CREATED',
-      finishAfter: { lte: now }
+      finishAfter: { lte: utcNow }
     },
     include: {
       account: { include: { wallet: true } },
@@ -184,11 +188,17 @@ export async function processExpiredEscrows() {
 export async function processExpiredOrders() {
   console.log('🔄 Processing expired orders...');
 
+  const now = new Date();
+  const utcNow = new Date(now.getTime() + now.getTimezoneOffset() * 60000);
+  const sevenDaysAgoUTC = new Date(utcNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+  console.log(`Checking for orders created before: ${sevenDaysAgoUTC.toISOString()} (UTC)`);
+
   const expiredOrders = await prisma.order.findMany({
     where: {
       status: 'PAID',
       createdAt: {
-        lte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // 7일 전
+        lte: sevenDaysAgoUTC // UTC 기준 7일 전
       }
     },
     include: {
@@ -198,7 +208,9 @@ export async function processExpiredOrders() {
   });
 
   for (const order of expiredOrders) {
-    const orderAge = (Date.now() - order.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+    const orderAge = (utcNow.getTime() - order.createdAt.getTime()) / (1000 * 60 * 60 * 24);
+
+    console.log(`Order ${order.id}: age=${orderAge.toFixed(2)} days, returnDays=${order.product.returnDays}`);
 
     if (orderAge > order.product.returnDays) {
       await prisma.order.update({
