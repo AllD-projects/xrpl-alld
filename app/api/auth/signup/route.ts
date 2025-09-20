@@ -13,6 +13,7 @@ export type SignupFormData = {
   displayName: string;
   role: "USER" | "COMPANY";
   companyName?: string;
+  passwordConfirm: string;
 };
 
 export const signupSchema = z.object({

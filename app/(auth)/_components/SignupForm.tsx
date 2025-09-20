@@ -8,17 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 export const signupSchema = z.object({
-  email: z.email(),
+  email: z.string().email(),
   password: z.string().min(6),
   displayName: z.string().min(1),
   role: z.enum(["USER", "COMPANY"]),
-  companyName: z.string().min(1).optional()
+  companyName: z.string().optional(),
+  passwordConfirm: z.string().min(6)
 });
 
 const ROLES = [
@@ -34,7 +35,8 @@ export default function SignupForm() {
       password: "",
       displayName: "",
       role: "USER",
-      companyName: ""
+      companyName: undefined,
+      passwordConfirm: ""
     }
   });
 
@@ -42,9 +44,7 @@ export default function SignupForm() {
 
   const router = useRouter();
 
-  const handleSubmitForm = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleSignup = async (data: SignupFormData) => {
     const ok = await confirm({
       title: "Signup Confirm",
       desc: "Are you sure you want to signup?",
@@ -60,7 +60,7 @@ export default function SignupForm() {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form.getValues())
+        body: JSON.stringify(data)
       });
 
       if (!response.ok) {
@@ -80,7 +80,7 @@ export default function SignupForm() {
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={handleSubmitForm}>
+      <form className="space-y-6">
         <FormField
           control={form.control}
           name="email"
@@ -111,6 +111,22 @@ export default function SignupForm() {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="passwordConfirm"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="passwordConfirm">
+                Password Confirm <span className="text-red-500">*</span>
+              </FormLabel>
+              <FormControl>
+                <Input id="passwordConfirm" type="password" placeholder="Password Confirm" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="displayName"
@@ -174,7 +190,16 @@ export default function SignupForm() {
           />
         )}
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button
+          type="button"
+          className="w-full"
+          onClick={() => {
+            form.handleSubmit((data) => {
+              handleSignup(data);
+            })();
+          }}
+          disabled={isLoading}
+        >
           {isLoading ? "Signing up..." : "Sign up"}
         </Button>
       </form>

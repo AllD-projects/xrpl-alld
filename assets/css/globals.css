@@ -6,13 +6,13 @@
   display: "swap";
   weight: "100 900";
   variable: "--font-roboto";
-  src: url("./fonts/RobotoVariable.woff2") format("woff2");
+  src: url("../fonts/RobotoVariable.woff2") format("woff2");
 }
 
 @font-face {
   font-family: "Classyvogue";
   variable: "--font-classyvogue";
-  src: url("./fonts/Classyvogueregular.woff2") format("woff2");
+  src: url("../fonts/Classyvogueregular.woff2") format("woff2");
 }
 
 @font-face {
@@ -20,7 +20,7 @@
   display: "swap";
   weight: "100 900";
   variable: "--font-suit";
-  src: url("./fonts/SUIT.woff2") format("woff2");
+  src: url("../fonts/SUIT.woff2") format("woff2");
 }
 
 @custom-variant dark (&:is(.dark *));

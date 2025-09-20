@@ -29,7 +29,7 @@ export function ConfirmDialog() {
     <AlertDialog open={state.open} onOpenChange={handleCancel}>
       <AlertDialogContent>
         <AlertDialogHeader className="text-left">
-          <AlertDialogTitle>{state.title}</AlertDialogTitle>
+          <AlertDialogTitle className="font-bold">{state.title}</AlertDialogTitle>
           <AlertDialogDescription asChild>
             <div>{state.desc ?? ""}</div>
           </AlertDialogDescription>
