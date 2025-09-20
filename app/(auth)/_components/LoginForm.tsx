@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 const EyeIcon = ({ visible }: { visible: boolean }) => {
   return visible ? <EyeSlash className="size-5 text-gray-500" /> : <Eye className="size-5 text-gray-500" />;
 };
+
+export const loginSchema = z.object({
+  email: z.email(),
+  password: z.string().min(1)
+});
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
@@ -18,7 +24,7 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmitForm = async (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
@@ -35,19 +41,23 @@ export default function LoginForm() {
 
       const result = await response.json();
 
-      if (result?.accessToken) {
-        toast.success(`Welcome, ${result.user.name}!`);
+      if (result?.ok) {
+        console.log("Login successful, redirecting to /company");
+        toast.success(`Welcome!`);
         router.push("/company");
+      } else {
+        console.log("Login failed:", result);
+        toast.error("Login failed");
       }
     } catch (error) {
-      toast.error("An error occurred while logging in.");
+      toast.error("Please check your login info");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmitForm} className="mt-8 space-y-6">
+    <form onSubmit={handleLogin} className="mt-8 space-y-6">
       <div className="space-y-3">
         <div className="group relative flex flex-col space-y-1 rounded-xl border border-gray-200 px-4 py-3 transition-all duration-150 focus-within:border-blue-500 focus-within:shadow-md">
           <label htmlFor="email" className="text-xs font-medium text-gray-500">

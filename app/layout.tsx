@@ -3,6 +3,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { ReactNode } from "react";
+import { Toaster } from "sonner";
 
 const roboto = localFont({
   src: "../assets/fonts/RobotoVariable.woff2",
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={`${roboto.className}`}>
         {children}
         <ConfirmDialog />
+        <Toaster position="bottom-center" richColors />
       </body>
     </html>
   );
