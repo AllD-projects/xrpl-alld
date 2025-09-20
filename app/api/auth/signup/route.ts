@@ -42,11 +42,15 @@ export async function POST(req: Request) {
 
         await faucet(w.seedPlain);
 
-        const cfg = await prisma.globalConfig.findFirst({ include: { adminIssuerWallet: true }});
+        const cfg = await prisma.globalConfig.findFirst();
+        const issuerWallet = await prisma.wallet.findUnique({
+            where: { id: cfg!.issuerWalletId }
+        })
+
         if (cfg?.mptIssuanceId) {
             await authorizeHolder(
                 w.seedPlain,
-                cfg.adminIssuerWallet!.seedCipher!,
+                issuerWallet!.seedCipher!,
                 cfg.mptIssuanceId,
             );
         }

@@ -59,10 +59,10 @@ export async function POST(request: NextRequest) {
                 .find(b => b.currency === "MPT")?.value ?? 0
         ) || 0;
 
-        const pointsToUse = Math.min(usePoints, availablePoint);
+        const pointsToUse = Math.min(usePoints, availablePoint) / 1000;
         console.log(`Points to use: ${pointsToUse} (requested: ${usePoints}, available: ${availablePoint})`)
         const finalAmount = totalAmount - pointsToUse;
-        const pointsToEarn = Math.floor(finalAmount * 0.05);
+        const pointsToEarn = Math.floor(finalAmount * 0.05) / 1000;
 
         const order = await prisma.order.create({
           data: {
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
           });
 
           // �x� � Фl\ �1
-          const pointsEarned = Math.floor(parseInt(order.totalDrops) * 0.05);
+          const pointsEarned = Math.floor(parseInt(order.totalDrops) * 0.05) / 1000;
 
           if (globalConfig?.adminIssuerWallet?.seedCipher &&
               order.buyer.wallet &&

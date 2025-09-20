@@ -30,7 +30,7 @@ export async function middleware(req: NextRequest) {
         pathname.startsWith("/company") ||
         pathname.startsWith("/admin") ||
         pathname.startsWith("/api/company") ||
-        pathname.startsWith("/api/products")
+        pathname.startsWith("/api/products") ||
         pathname.startsWith("/api/admin");
 
     if (!needAuth) return NextResponse.next();

@@ -43,50 +43,129 @@ export async function processExpiredEscrows() {
       const [, sequence] = (escrow.createTx || ':').split(':');
       const escrowSequence = parseInt(sequence);
 
-      // 에스크로 해제
-      const result = await releaseEscrowedPoints(
-        globalConfig.adminIssuerWallet.seedCipher,
-        escrow.issuer,
-        escrowSequence,
-        globalConfig.mptIssuanceId
-      );
+      if (!escrowSequence || isNaN(escrowSequence)) {
+        console.log(`⚠️ Invalid sequence for escrow ${escrow.id}: ${escrow.createTx}`);
 
-      // DB 업데이트
-      await prisma.$transaction(async (tx) => {
-        await tx.pointEscrow.update({
-          where: { id: escrow.id },
-          data: {
-            status: 'RELEASED',
-            finishTx: result.txHash
-          }
-        });
-
-        await tx.pointLedger.create({
-          data: {
-            accountId: escrow.accountId,
-            type: 'EARN',
-            amount: escrow.amountStr,
-            mptCode: globalConfig.mptCode,
-            issuer: globalConfig.adminIssuerWallet!.classicAddress,
-            note: `Auto-released points from escrow ${escrow.id}`
-          }
-        });
-
-        // 주문이 있다면 상태 업데이트
-        if (escrow.orderId) {
-          await tx.order.update({
-            where: { id: escrow.orderId },
-            data: { status: 'RELEASED' }
+        // 시퀀스가 없으면 직접 포인트 지급
+        await prisma.$transaction(async (tx) => {
+          await tx.pointEscrow.update({
+            where: { id: escrow.id },
+            data: {
+              status: 'RELEASED',
+              finishTx: 'MANUAL_RELEASE'
+            }
           });
-        }
-      });
 
-      processed++;
-      console.log(`✅ Released escrow ${escrow.id}: ${escrow.amountStr} points`);
+          await tx.pointLedger.create({
+            data: {
+              accountId: escrow.accountId,
+              type: 'EARN',
+              amount: escrow.amountStr,
+              mptCode: globalConfig.mptCode,
+              issuer: globalConfig.adminIssuerWallet!.classicAddress,
+              note: `Manual release - invalid tx sequence for escrow ${escrow.id}`
+            }
+          });
+
+          if (escrow.orderId) {
+            await tx.order.update({
+              where: { id: escrow.orderId },
+              data: { status: 'RELEASED' }
+            });
+          }
+        });
+
+        processed++;
+        console.log(`✅ Manually released escrow ${escrow.id}: ${escrow.amountStr} points (invalid sequence)`);
+        continue;
+      }
+
+      try {
+        // 에스크로 해제 시도
+        const result = await releaseEscrowedPoints(
+          globalConfig.adminIssuerWallet.seedCipher,
+          escrow.issuer,
+          escrowSequence,
+          globalConfig.mptIssuanceId
+        );
+
+        // 성공 시 DB 업데이트
+        await prisma.$transaction(async (tx) => {
+          await tx.pointEscrow.update({
+            where: { id: escrow.id },
+            data: {
+              status: 'RELEASED',
+              finishTx: result.txHash
+            }
+          });
+
+          await tx.pointLedger.create({
+            data: {
+              accountId: escrow.accountId,
+              type: 'EARN',
+              amount: escrow.amountStr,
+              mptCode: globalConfig.mptCode,
+              issuer: globalConfig.adminIssuerWallet!.classicAddress,
+              note: `Auto-released points from escrow ${escrow.id}`
+            }
+          });
+
+          if (escrow.orderId) {
+            await tx.order.update({
+              where: { id: escrow.orderId },
+              data: { status: 'RELEASED' }
+            });
+          }
+        });
+
+        processed++;
+        console.log(`✅ Released escrow ${escrow.id}: ${escrow.amountStr} points`);
+
+      } catch (escrowError) {
+        // 에스크로가 이미 처리되었거나 찾을 수 없는 경우
+        if (escrowError instanceof Error && escrowError.message.includes('Escrow not found')) {
+          console.log(`⚠️ Escrow ${escrow.id} not found on chain - marking as released`);
+
+          // 이미 처리된 것으로 간주하고 DB만 업데이트
+          await prisma.$transaction(async (tx) => {
+            await tx.pointEscrow.update({
+              where: { id: escrow.id },
+              data: {
+                status: 'RELEASED',
+                finishTx: 'ALREADY_PROCESSED'
+              }
+            });
+
+            await tx.pointLedger.create({
+              data: {
+                accountId: escrow.accountId,
+                type: 'EARN',
+                amount: escrow.amountStr,
+                mptCode: globalConfig.mptCode,
+                issuer: globalConfig.adminIssuerWallet!.classicAddress,
+                note: `Auto-credited - escrow ${escrow.id} was already processed on chain`
+              }
+            });
+
+            if (escrow.orderId) {
+              await tx.order.update({
+                where: { id: escrow.orderId },
+                data: { status: 'RELEASED' }
+              });
+            }
+          });
+
+          processed++;
+          console.log(`✅ Marked escrow ${escrow.id} as released: ${escrow.amountStr} points`);
+        } else {
+          // 다른 에러는 재시도하도록 실패로 처리
+          throw escrowError;
+        }
+      }
 
     } catch (error) {
       failed++;
-      console.error(`❌ Failed to release escrow ${escrow.id}:`, error);
+      console.error(`❌ Failed to process escrow ${escrow.id}:`, error);
     }
   }
 

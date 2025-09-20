@@ -7,6 +7,9 @@ import { Role, WalletKind } from "@prisma/client";
 import {createDomain} from "@/lib/permissionedDomain";
 import {createIssuance} from "@/lib/createIssuance";
 import { initializeSubscriptionPlans } from '@/lib/subscription-plans';
+import {sendMPT} from "@/lib/sendMpt";
+import '@/lib/server-init'; // 서버 초기화
+import {authorizeHolder} from "@/lib/authorizeHolder";
 
 export async function POST(request: NextRequest) {
     try {
@@ -32,8 +35,18 @@ export async function POST(request: NextRequest) {
 
                 // 1. 관리자 계정 생성
                 const email = "admin@example.com";
+                const email1 = "issuer@example.com";
                 const password = "Admin#1234"; // 해커톤용 기본 비번
                 const passwordHash = await bcrypt.hash(password, 10);
+
+                const issuerAccount = await prisma.account.create({
+                    data: {
+                        email: email1,
+                        displayName: "Issuer",
+                        role: Role.ADMIN,
+                        passwordHash,
+                    },
+                });
 
                 const adminAccount = await prisma.account.create({
                     data: {
@@ -46,9 +59,11 @@ export async function POST(request: NextRequest) {
 
                 // 2. 관리자 발행 지갑 생성
                 const w = createWallet();
+                const issuerW = createWallet();
 
                 // 3. Devnet 펀딩
                 await faucet(w.seedPlain);
+                await faucet(issuerW.seedPlain);
 
                 const wallet = await prisma.wallet.create({
                     data: {
@@ -57,19 +72,39 @@ export async function POST(request: NextRequest) {
                         classicAddress: w.classicAddress,
                         publicKey: w.publicKey,
                         seedCipher: w.seedPlain, // ⚠️ 데모용 그대로 저장
+                        label: "Admin Wallet",
+                    },
+                });
+
+                const issuerWallet = await prisma.wallet.create({
+                    data: {
+                        ownerAccountId: issuerAccount.id,
+                        kind: WalletKind.ADMIN_ISSUER,
+                        classicAddress: issuerW.classicAddress,
+                        publicKey: issuerW.publicKey,
+                        seedCipher: issuerW.seedPlain, // ⚠️ 데모용 그대로 저장
                         label: "Admin Issuer Wallet",
                     },
                 });
 
                 const domainSetTx = await createDomain(w.seedPlain);
-                const issuanceId = await createIssuance(w.seedPlain);
+                const issuanceId = await createIssuance(issuerW.seedPlain);
+                await authorizeHolder(
+                    w.seedPlain,
+                    issuerWallet.seedCipher!,
+                    issuanceId,
+                );
+                // mpt send
+                await sendMPT(wallet.seedCipher!, issuerWallet.seedCipher!, issuanceId, "922337203685477")
 
                 // 4. GlobalConfig 등록
                 const config = await prisma.globalConfig.create({
                     data: {
                         adminAccountId: adminAccount.id,
                         adminIssuerWalletId: wallet.id,
-                        mptIssuanceId: issuanceId
+                        mptIssuanceId: issuanceId,
+                        issuerAccountId: issuerAccount.id,
+                        issuerWalletId: issuerWallet.id
                     },
                 });
 
