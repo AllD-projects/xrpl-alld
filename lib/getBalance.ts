@@ -8,6 +8,7 @@ export async function getBalance(userSeed: string): Promise<Array<{ value: strin
     const user = Wallet.fromSeed(userSeed);
 
     const balance = await client.getBalances(user.address)
+    console.log(balance)
 
     return balance
 }
