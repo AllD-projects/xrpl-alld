@@ -1,0 +1,22 @@
+{
+  "title": "Digital Copyright Certificate",
+  "nftTokenId": "000B0000A15209C9B3F0B0C186BC76EA00BC0FA7283CE0761707107D006084E2",
+  "postTitle": "My Post with Images",
+  "originalAuthor": "company",
+  "currentOwner": "company",
+  "copyrightHash": "76084204b255b0fad597285c94b7d42746d175a20e7a8fe00b5e781630ff119b",
+  "mintedAt": "2025-09-20T02:34:59.805Z",
+  "blockchainTxHash": "D826A738A021CC40830A48787B417D47C7A87143BA4E933191F858409A34DFA3",
+  "verification": {
+    "network": "XRPL",
+    "verified": true,
+    "verificationUrl": "https://testnet.xrpl.org/transactions/D826A738A021CC40830A48787B417D47C7A87143BA4E933191F858409A34DFA3"
+  },
+  "content": {
+    "title": "My Post with Images",
+    "description": "photos!",
+    "imageCount": 2,
+    "createdAt": "2025-09-20T02:33:29.166Z"
+  },
+  "disclaimer": "This certificate serves as proof of digital ownership and copyright registration on the XRP Ledger blockchain."
+}

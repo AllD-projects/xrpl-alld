@@ -13,7 +13,7 @@ export async function sendMPT(userSeed: string, adminSeed: string, issuanceId: s
         Destination: user.address,
         Amount: {
             mpt_issuance_id: issuanceId,  // 발행본 ID
-            value: value                   // 전송 수량
+            value: value                 // 전송 수량
         }
     }
 
@@ -22,6 +22,7 @@ export async function sendMPT(userSeed: string, adminSeed: string, issuanceId: s
         const prepared = await client.autofill(tx)
         const signed   = admin.sign(prepared)
         const result   = await client.submitAndWait(signed.tx_blob)
+        console.log(result)
 
         return result
     } finally {

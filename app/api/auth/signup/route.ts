@@ -51,10 +51,18 @@ export async function POST(req: Request) {
 
     await faucet(w.seedPlain);
 
-    const cfg = await prisma.globalConfig.findFirst({ include: { adminIssuerWallet: true } });
-    if (cfg?.mptIssuanceId) {
-      await authorizeHolder(w.seedPlain, cfg.adminIssuerWallet!.seedCipher!, cfg.mptIssuanceId);
-    }
+        const cfg = await prisma.globalConfig.findFirst();
+        const issuerWallet = await prisma.wallet.findUnique({
+            where: { id: cfg!.issuerWalletId }
+        })
+
+        if (cfg?.mptIssuanceId) {
+            await authorizeHolder(
+                w.seedPlain,
+                issuerWallet!.seedCipher!,
+                cfg.mptIssuanceId,
+            );
+        }
 
     if (body.role === "USER") {
       const wallet = await prisma.wallet.create({

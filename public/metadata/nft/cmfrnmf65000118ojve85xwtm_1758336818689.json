@@ -1,0 +1,55 @@
+{
+  "name": "Copyright: My Post with Images",
+  "description": "Copyright protection NFT for post \"My Post with Images\" by company",
+  "image": "/uploads/posts/1758335609157_g64vryqv2rs.png",
+  "external_url": "undefined/posts/cmfrnmf65000118ojve85xwtm",
+  "attributes": [
+    {
+      "trait_type": "Content Type",
+      "value": "Post"
+    },
+    {
+      "trait_type": "Author",
+      "value": "company"
+    },
+    {
+      "trait_type": "Created Date",
+      "value": "2025-09-20T02:33:29.166Z"
+    },
+    {
+      "trait_type": "Image Count",
+      "value": 2
+    },
+    {
+      "trait_type": "Copyright Hash",
+      "value": "76084204b255b0fad597285c94b7d42746d175a20e7a8fe00b5e781630ff119b"
+    }
+  ],
+  "properties": {
+    "postId": "cmfrnmf65000118ojve85xwtm",
+    "originalContent": {
+      "title": "My Post with Images",
+      "description": "photos!",
+      "images": [
+        {
+          "id": "cmfrnmf65000218ojrsnkmiw1",
+          "postId": "cmfrnmf65000118ojve85xwtm",
+          "imageUrl": "/uploads/posts/1758335609157_g64vryqv2rs.png",
+          "position": 0,
+          "alt": "My Post with Images - Image 1",
+          "createdAt": "2025-09-20T02:33:29.166Z"
+        },
+        {
+          "id": "cmfrnmf65000318ojjkk2lqpd",
+          "postId": "cmfrnmf65000118ojve85xwtm",
+          "imageUrl": "/uploads/posts/1758335609161_gichdat4paf.webp",
+          "position": 1,
+          "alt": "My Post with Images - Image 2",
+          "createdAt": "2025-09-20T02:33:29.166Z"
+        }
+      ]
+    },
+    "copyrightHash": "76084204b255b0fad597285c94b7d42746d175a20e7a8fe00b5e781630ff119b",
+    "mintedAt": "2025-09-20T02:53:38.688Z"
+  }
+}

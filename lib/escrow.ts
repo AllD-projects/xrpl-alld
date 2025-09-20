@@ -14,7 +14,7 @@ export async function createMPTEscrow(
   finishAfterSeconds: number = 60  // 기본 7일
 ) {
   // XRPL 시간은 2000년 1월 1일 기준 (946684800 = Unix epoch와의 차이)
-  const finishAfter = Math.floor(Date.now() / 1000) + finishAfterSeconds - 946684800;
+  const finishAfter = Math.floor(Date.now() / 1000) + finishAfterSeconds - 946684800 + 120;
   const cancelAfter = finishAfter + (60); // 추가 7일 후 취소 가능
 
   const escrowTx: Transaction = {
@@ -52,8 +52,8 @@ export async function createMPTEscrow(
       success: true,
       txHash: result.result.hash,
       sequence: (prepared as any).Sequence,
-      finishAfter: new Date((finishAfter - 946684800) * 1000),
-      cancelAfter: new Date((cancelAfter - 946684800) * 1000),
+      finishAfter: new Date((finishAfter + 946684800) * 1000),
+      cancelAfter: new Date((cancelAfter + 946684800) * 1000),
       result: result
     };
   } catch (error) {
@@ -143,40 +143,63 @@ export async function checkEscrowStatus(
   escrowSequence: number
 ) {
   try {
+    console.log(`🔍 Checking escrow status: owner=${ownerAddress}, sequence=${escrowSequence}`);
+
     const response = await client.request({
       command: 'account_objects',
       account: ownerAddress,
       type: 'escrow'
     });
 
-    const escrow = response.result.account_objects.find(
+    console.log(`📋 Found ${response.result.account_objects.length} escrow objects for ${ownerAddress}`);
+
+    // 여러 방법으로 에스크로 찾기 시도
+    let escrow = response.result.account_objects.find(
       (obj: any) => obj.PreviousTxnID === escrowSequence
     );
 
+    // PreviousTxnID로 찾지 못한 경우 Sequence로 찾기
     if (!escrow) {
+      escrow = response.result.account_objects.find(
+        (obj: any) => obj.Sequence === escrowSequence
+      );
+    }
+
+    // 여전히 찾지 못한 경우 모든 에스크로 로그
+    if (!escrow) {
+      console.log('🔍 All escrow objects:', JSON.stringify(response.result.account_objects, null, 2));
+
+      // 에스크로가 이미 완료되었거나 취소되었을 수 있음
       return {
         exists: false,
-        message: 'Escrow not found or already finished/cancelled'
+        alreadyProcessed: true,
+        message: 'Escrow not found - likely already finished/cancelled'
       };
     }
 
-    const now = Math.floor(Date.now() / 1000) + 946684800;
+    const now = Math.floor(Date.now() / 1000) - 946684800;
     const finishAfter = escrow.FinishAfter;
     const cancelAfter = escrow.CancelAfter;
+
+    console.log(`⏰ Escrow timing: now=${now}, finishAfter=${finishAfter}, cancelAfter=${cancelAfter}`);
 
     return {
       exists: true,
       canFinish: now >= finishAfter,
       canCancel: now >= cancelAfter,
-      finishAfter: new Date((finishAfter - 946684800) * 1000),
-      cancelAfter: new Date((cancelAfter - 946684800) * 1000),
+      finishAfter: new Date((finishAfter + 946684800) * 1000),
+      cancelAfter: new Date((cancelAfter + 946684800) * 1000),
       destination: escrow.Destination,
       amount: escrow.Amount,
       escrowData: escrow
     };
   } catch (error) {
     console.error('❌ Escrow 상태 확인 실패:', error);
-    throw error;
+    return {
+      exists: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to check escrow status'
+    };
   }
 }
 

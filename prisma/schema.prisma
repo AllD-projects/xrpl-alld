@@ -96,6 +96,15 @@ model Account {
   pointEscrows PointEscrow[]
   posts        Post[]
 
+  // NFT 관련 관계
+  ownedNFTs       PostNFT[]
+  nftLicenses     NFTLicense[]
+  nftTransfersFrom NFTTransfer[] @relation("NFTTransferFrom")
+  nftTransfersTo   NFTTransfer[] @relation("NFTTransferTo")
+
+  // 기부 관련 관계
+  donations Donation[]
+
   // GlobalConfig 역방향(관리자일 때만 매핑됨)
   globalConfig GlobalConfig? @relation("GlobalConfigAdminAccount")
 
@@ -188,6 +197,11 @@ model GlobalConfig {
 
   adminAccountId String  @unique
   adminAccount   Account @relation("GlobalConfigAdminAccount", fields: [adminAccountId], references: [id])
+
+  issuerAccountId String
+
+  issuerWalletId String?
+
 
   adminIssuerWalletId String? @unique
   adminIssuerWallet   Wallet? @relation("GlobalConfigAdminIssuerWallet", fields: [adminIssuerWalletId], references: [id])
@@ -387,6 +401,8 @@ model Post {
   title       String
   description String?
   images      PostImage[]
+  nft         PostNFT?
+  donations   Donation[]
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -407,6 +423,108 @@ model PostImage {
 
   @@index([postId, position])
   @@map("post_images")
+}
+
+/**
+ * ========= Post NFT (저작권 보호) =========
+ */
+model PostNFT {
+  id              String          @id @default(cuid())
+  post            Post            @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId          String          @unique
+  owner           Account         @relation(fields: [ownerId], references: [id])
+  ownerId         String
+  nftTokenId      String          @unique
+  txHash          String          @unique
+  metadataUrl     String?
+  copyrightHash   String          @unique // 컨텐츠 해시 (저작권 증명)
+  mintedAt        DateTime        @default(now())
+
+  licenses        NFTLicense[]
+  transferHistory NFTTransfer[]
+
+  @@index([ownerId, mintedAt])
+  @@index([copyrightHash])
+  @@map("post_nfts")
+}
+
+model NFTLicense {
+  id          String       @id @default(cuid())
+  nft         PostNFT      @relation(fields: [nftId], references: [id], onDelete: Cascade)
+  nftId       String
+  licensee    Account      @relation(fields: [licenseeId], references: [id])
+  licenseeId  String
+  licenseType LicenseType
+  price       String?      // XRP drops
+  duration    Int?         // days, null = permanent
+  isActive    Boolean      @default(true)
+  txHash      String?
+  createdAt   DateTime     @default(now())
+  expiresAt   DateTime?
+
+  @@index([nftId, isActive])
+  @@index([licenseeId])
+  @@map("nft_licenses")
+}
+
+model NFTTransfer {
+  id         String   @id @default(cuid())
+  nft        PostNFT  @relation(fields: [nftId], references: [id], onDelete: Cascade)
+  nftId      String
+  from       Account  @relation("NFTTransferFrom", fields: [fromId], references: [id])
+  fromId     String
+  to         Account  @relation("NFTTransferTo", fields: [toId], references: [id])
+  toId       String
+  price      String?  // XRP drops
+  txHash     String   @unique
+  createdAt  DateTime @default(now())
+
+  @@index([nftId, createdAt])
+  @@index([fromId])
+  @@index([toId])
+  @@map("nft_transfers")
+}
+
+enum LicenseType {
+  PERSONAL_USE
+  COMMERCIAL_USE
+  EXCLUSIVE_USE
+  ATTRIBUTION_REQUIRED
+}
+
+enum DonationType {
+  XRP
+  MPT
+}
+
+enum DonationStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+/**
+ * ========= Donations (게시글 기부) =========
+ */
+model Donation {
+  id        String         @id @default(cuid())
+  post      Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  donor     Account        @relation(fields: [donorId], references: [id])
+  donorId   String
+  type      DonationType
+  amount    String         // XRP drops or MPT amount
+  currency  String?        // MPT code (null for XRP)
+  status    DonationStatus @default(PENDING)
+  txHash    String?        @unique
+  message   String?        // Optional donation message
+  createdAt DateTime       @default(now())
+
+  @@index([postId, createdAt])
+  @@index([donorId, createdAt])
+  @@index([status])
+  @@map("donations")
 }
 
 /**

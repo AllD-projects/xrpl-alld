@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyJwt } from "@/lib/jwt";
+import '@/lib/server-init'; // 서버 초기화
 
 export async function GET(req: Request) {
     try {

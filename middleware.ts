@@ -29,13 +29,13 @@ export async function middleware(req: NextRequest) {
   const isPublicApi = PUBLIC_API_PREFIXES.some((p) => pathname.startsWith(p));
   if (isPublicPage || isPublicApi) return NextResponse.next();
 
-  const needAuth =
-    pathname.startsWith("/user") ||
-    pathname.startsWith("/company") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/api/company") ||
-    pathname.startsWith("/api/products") ||
-    pathname.startsWith("/api/admin");
+    const needAuth =
+        pathname.startsWith("/user") ||
+        pathname.startsWith("/company") ||
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/api/company") ||
+        pathname.startsWith("/api/products") ||
+        pathname.startsWith("/api/admin");
 
   if (!needAuth) return NextResponse.next();
 

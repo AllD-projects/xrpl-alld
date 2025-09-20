@@ -182,6 +182,14 @@ export async function GET(request: NextRequest) {
           },
           images: {
             orderBy: { position: 'asc' }
+          },
+          nft: {
+            select: {
+              id: true,
+              nftTokenId: true,
+              mintedAt: true,
+              ownerId: true
+            }
           }
         }
       });
@@ -217,6 +225,32 @@ export async function GET(request: NextRequest) {
           },
           images: {
             orderBy: { position: 'asc' }
+          },
+          nft: {
+            select: {
+              id: true,
+              nftTokenId: true,
+              mintedAt: true,
+              ownerId: true
+            }
+          },
+          donations: {
+            where: { status: 'COMPLETED' },
+            select: {
+              id: true,
+              type: true,
+              amount: true,
+              currency: true,
+              donor: {
+                select: {
+                  displayName: true,
+                  role: true
+                }
+              },
+              createdAt: true
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 5
           }
         },
         orderBy: {
