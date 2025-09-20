@@ -4,7 +4,7 @@ XRPL 기반의 종합 Web3 이커머스 플랫폼으로, MPT 기반 포인트 �
 
 ## 🎥 프로젝트 데모
 
-![데모영상](https://youtu.be/yOAkZAWKap4)
+![데모영상](https://www.youtube.com/watch?v=yOAkZAWKap4)
 
 ## 📱 UI 스크린샷
 
