@@ -1,0 +1,424 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL") // e.g. "file:./dev.db"
+}
+
+/**
+ * ========= Enums =========
+ */
+enum Role {
+  USER
+  COMPANY
+  ADMIN
+}
+
+enum OrderStatus {
+  CREATED
+  PAID
+  ESCROWED
+  RELEASED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+enum EscrowStatus {
+  CREATED
+  RELEASED
+  CANCELED
+}
+
+enum PointTxnType {
+  EARN
+  USE
+  REFUND
+}
+
+enum CredentialStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum WalletKind {
+  USER
+  COMPANY
+  ADMIN_ISSUER
+}
+
+/**
+ * ✅ 기업 인증 상태 추가
+ */
+enum CompanyVerifyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+/**
+ * ========= Auth / Accounts =========
+ */
+model Account {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  displayName  String
+  role         Role      @default(USER)
+  passwordHash String
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+
+  // 유저당 지갑 1개 (옵션 → 가입 후 나중에 연결 가능)
+  wallet Wallet?
+
+  // 한 계정이 여러 회사를 소유할 수 있게 1:N
+  company           Company?  @relation("AccountOwnsCompany")
+  verifiedCompanies Company[] @relation("CompanyVerifiedByAccount")
+
+  // 관계 역방향(필수): 에러 방지
+  orders       Order[]
+  pointLedgers PointLedger[]
+  pointEscrows PointEscrow[]
+  posts        Post[]
+
+  // GlobalConfig 역방향(관리자일 때만 매핑됨)
+  globalConfig GlobalConfig? @relation("GlobalConfigAdminAccount")
+
+  createdAt DateTime @default(now())
+}
+
+model Company {
+  id      String  @id @default(cuid())
+  owner   Account @relation("AccountOwnsCompany", fields: [ownerId], references: [id])
+  ownerId String  @unique
+  name    String
+  domain  String?
+
+  // 회사당 지갑 1개 (옵션)
+  wallet Wallet?
+
+  policy        DomainPolicy?
+  products      Product[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now())
+
+  /**
+   * ✅ 기업 인증(O1) 상태/이력
+   */
+  verifyStatus CompanyVerifyStatus @default(PENDING)
+  verifiedAt   DateTime?
+  verifiedById String?
+  verifiedBy   Account?            @relation("CompanyVerifiedByAccount", fields: [verifiedById], references: [id])
+  verifyNote   String?
+
+  // ✅ 기업 크레덴셜(메모 트랜잭션 해시) 1:1
+  companyCredential CompanyCredential?
+
+  @@index([verifyStatus, createdAt])
+}
+
+model DomainPolicy {
+  id                String   @id @default(cuid())
+  company           Company  @relation(fields: [companyId], references: [id])
+  companyId         String   @unique
+  requireCredential Boolean  @default(true)
+  allowedMptCode    String?
+  createdAt         DateTime @default(now())
+}
+
+/**
+ * ========= Wallet (1:1 소유) =========
+ */
+model Wallet {
+  id String @id @default(cuid())
+
+  // 정확히 하나만 채우도록 애플리케이션에서 보장 (DB: 각각 유니크로 1:1 enforce)
+  ownerAccountId String?  @unique
+  ownerAccount   Account? @relation(fields: [ownerAccountId], references: [id])
+
+  ownerCompanyId String?  @unique
+  ownerCompany   Company? @relation(fields: [ownerCompanyId], references: [id])
+
+  label String?
+
+  classicAddress String  @unique
+  publicKey      String?
+  seedCipher     String? // 데모 시 암호화 저장 (운영 비권장)
+
+  kind WalletKind
+  tag  Int?
+
+  // GlobalConfig(관리자 발행 지갑) 역방향
+  globalConfigAsIssuer GlobalConfig? @relation("GlobalConfigAdminIssuerWallet")
+
+  /**
+   * ✅ PermissionedDomain 표식
+   */
+  domain         String?
+  domainVerified Boolean @default(false)
+  domainSetTx    String? // AccountSet(Domain) tx hash
+
+  createdAt DateTime @default(now())
+
+  @@index([ownerAccountId])
+  @@index([ownerCompanyId])
+}
+
+/**
+ * ========= Global Config (싱글톤: 관리자 1명 & 발행 지갑 1개) =========
+ */
+model GlobalConfig {
+  id String @id @default("GLOBAL")
+
+  adminAccountId String  @unique
+  adminAccount   Account @relation("GlobalConfigAdminAccount", fields: [adminAccountId], references: [id])
+
+  adminIssuerWalletId String? @unique
+  adminIssuerWallet   Wallet? @relation("GlobalConfigAdminIssuerWallet", fields: [adminIssuerWalletId], references: [id])
+
+  mptCode     String @default("FASHIONPOINT")
+  mptDecimals Int    @default(6)
+
+  mptIssuanceId String?
+
+
+  createdAt DateTime @default(now())
+}
+
+/**
+ * ========= Catalog =========
+ */
+model Product {
+  id          String             @id @default(cuid())
+  company     Company            @relation(fields: [companyId], references: [id])
+  companyId   String
+  title       String
+  description String?
+  priceDrops  String
+  returnDays  Int
+  active      Boolean            @default(true)
+  images      ProductImage[]
+  credential  ProductCredential?
+
+  // 역방향: 주문들이 이 상품을 참조
+  orders Order[]
+
+  createdAt DateTime @default(now())
+
+  @@index([companyId, active])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  path      String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// (선택적) 상품별 추가 라벨용 Credential (기업 인증으로 기본 보증은 충족)
+model ProductCredential {
+  id        String           @id @default(cuid())
+  product   Product          @relation(fields: [productId], references: [id])
+  productId String           @unique
+  type      String
+  issuedBy  String // 발행 지갑 주소
+  status    CredentialStatus @default(ACTIVE)
+  issuedAt  DateTime         @default(now())
+  expiresAt DateTime?
+}
+
+/**
+ * ========= Company Credential (O1: Memo Credential) =========
+ */
+model CompanyCredential {
+  id        String  @id @default(cuid())
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String  @unique
+
+  txHash    String    @unique // 관리자→회사로 보낸 Memo Credential TX 해시
+  issuedBy  String // 관리자 지갑 주소
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime?
+  active    Boolean   @default(true)
+
+  @@index([active, issuedAt])
+}
+
+/**
+ * ========= Orders / Payments =========
+ */
+model Order {
+  id             String      @id @default(cuid())
+  buyer          Account     @relation(fields: [buyerId], references: [id])
+  buyerId        String
+  product        Product     @relation(fields: [productId], references: [id])
+  productId      String
+  unitPriceDrops String
+  quantity       Int         @default(1)
+  totalDrops     String
+  usePointAmt    String      @default("0")
+  status         OrderStatus @default(CREATED)
+
+  timeline OrderEvent[]
+  payments Payment[]
+  escrows  PointEscrow[]
+
+  createdAt DateTime @default(now())
+
+  @@index([buyerId, status, createdAt])
+}
+
+model OrderEvent {
+  id      String   @id @default(cuid())
+  order   Order    @relation(fields: [orderId], references: [id])
+  orderId String
+  type    String
+  note    String?
+  at      DateTime @default(now())
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  order       Order         @relation(fields: [orderId], references: [id])
+  orderId     String
+  currency    String // 'XRP'
+  amountDrops String
+  payerAddr   String
+  payTxHash   String?       @unique
+  status      PaymentStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+}
+
+/**
+ * ========= Points (MPT Ledger) =========
+ */
+model PointLedger {
+  id        String       @id @default(cuid())
+  account   Account      @relation(fields: [accountId], references: [id])
+  accountId String
+  type      PointTxnType
+  amount    String
+  mptCode   String
+  issuer    String
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([accountId, createdAt])
+}
+
+/**
+ * ========= MPT Usage Escrow =========
+ */
+model PointEscrow {
+  id        String  @id @default(cuid())
+  account   Account @relation(fields: [accountId], references: [id])
+  accountId String
+
+  order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String?
+
+  mptCode     String
+  issuer      String
+  amountStr   String
+  condition   String?
+  finishAfter DateTime
+  cancelAfter DateTime
+  status      EscrowStatus @default(CREATED)
+  createTx    String?      @unique
+  finishTx    String?      @unique
+  cancelTx    String?      @unique
+  createdAt   DateTime     @default(now())
+
+  @@index([accountId, status, finishAfter])
+}
+
+/**
+ * ========= B2B Subscription =========
+ */
+model Plan {
+  id            String         @id @default(cuid())
+  name          String @unique
+  priceDrops    String
+  interval      String
+  createdAt     DateTime       @default(now())
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  company            Company            @relation(fields: [companyId], references: [id])
+  companyId          String
+  plan               Plan               @relation(fields: [planId], references: [id])
+  planId             String
+  status             SubscriptionStatus @default(ACTIVE)
+  currentPeriodStart DateTime           @default(now())
+  currentPeriodEnd   DateTime
+  lastPaymentTxHash  String?
+  createdAt          DateTime           @default(now())
+
+  @@index([companyId, status])
+}
+
+/**
+ * ========= Posts (사용자 게시글) =========
+ */
+model Post {
+  id          String      @id @default(cuid())
+  author      Account     @relation(fields: [authorId], references: [id])
+  authorId    String
+  title       String
+  description String?
+  images      PostImage[]
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([authorId, createdAt])
+  @@index([isActive, createdAt])
+  @@map("posts")
+}
+
+model PostImage {
+  id       String   @id @default(cuid())
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId   String
+  imageUrl String
+  position Int      @default(0)
+  alt      String?
+  createdAt DateTime @default(now())
+
+  @@index([postId, position])
+  @@map("post_images")
+}
+
+/**
+ * ========= Audit (옵션) =========
+ */
+model AuditLog {
+  id     String   @id @default(cuid())
+  actor  String // accountId or 'system'
+  action String
+  target String?
+  meta   String?
+  at     DateTime @default(now())
+
+  @@index([actor, at])
+}
