@@ -7,16 +7,16 @@ const roboto = localFont({
   src: "./assets/fonts/RobotoVariable.woff2",
   display: "swap",
   weight: "100 900",
-  variable: "--font-roboto",
+  variable: "--font-roboto"
 });
 
 export const metadata: Metadata = {
   title: "AIID",
-  description: "development in progress",
+  description: "development in progress"
 };
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
   children: ReactNode;
 }>) {

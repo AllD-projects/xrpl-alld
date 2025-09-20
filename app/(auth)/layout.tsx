@@ -1,11 +1,5 @@
 import { ReactNode } from "react";
-import LandingPage from "./_components/LandingPage";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return (
-    <main className="relative h-screen">
-      <LandingPage />
-      {children}
-    </main>
-  );
+  return <main className="relative min-h-screen">{children}</main>;
 }

@@ -2,6 +2,14 @@
 @import "tw-animate-css";
 
 @font-face {
+  font-family: "Roboto";
+  display: "swap";
+  weight: "100 900";
+  variable: "--font-roboto";
+  src: url("/src/assets/fonts/RobotoVariable.woff2") format("woff2");
+}
+
+@font-face {
   font-family: "Classyvogue";
   variable: "--font-classyvogue";
   src: url("/src/assets/fonts/Classyvogueregular.woff2") format("woff2");
@@ -9,6 +17,8 @@
 
 @font-face {
   font-family: "SUIT";
+  display: "swap";
+  weight: "100 900";
   variable: "--font-suit";
   src: url("/src/assets/fonts/SUIT.woff2") format("woff2");
 }
@@ -140,4 +150,75 @@
   .font-classyvogue {
     font-family: "Classyvogue", serif;
   }
+  .font-roboto {
+    font-family: "Roboto", sans-serif;
+  }
+}
+
+@layer utilities {
+  .inner {
+    @apply mx-auto w-[95%] max-w-[1740px];
+  }
+}
+
+/** Toast */
+
+/* 전체 토스트 컨테이너 */
+[data-sonner-toaster] {
+  --font-family: "Roboto", sans-serif;
+  --font-size: 1rem;
+  --font-weight: 700;
+  --line-height: 1.4;
+}
+
+/* 토스트 메시지 텍스트 */
+[data-sonner-toast] {
+  font-family: var(--font-family) !important;
+  font-size: var(--font-size) !important;
+  font-weight: var(--font-weight) !important;
+  line-height: var(--line-height) !important;
+}
+
+/* 토스트 제목 */
+[data-sonner-toast] [data-sonner-toast-title] {
+  font-size: calc(var(--font-size) + 2px) !important;
+  font-weight: 600 !important;
+}
+
+/* 토스트 설명 */
+[data-sonner-toast] [data-sonner-toast-description] {
+  font-size: calc(var(--font-size) - 1px) !important;
+  font-weight: 400 !important;
+  opacity: 0.8;
+}
+
+/* 성공 토스트 */
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: #10b981;
+}
+
+/* 에러 토스트 */
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: #ef4444;
+}
+
+/* 경고 토스트 */
+[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: #f59e0b;
+}
+
+/* 정보 토스트 */
+[data-sonner-toast][data-type="info"] [data-icon] {
+  color: #3b82f6;
+}
+
+/* 토스트 아이콘 */
+[data-sonner-toast] [data-sonner-toast-icon] {
+  font-size: calc(var(--font-size) + 4px) !important;
+}
+
+/* 토스트 액션 버튼 */
+[data-sonner-toast] [data-sonner-toast-action] {
+  font-size: calc(var(--font-size) - 1px) !important;
+  font-weight: 500 !important;
 }
