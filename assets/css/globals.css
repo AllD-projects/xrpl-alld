@@ -159,6 +159,32 @@
   .inner {
     @apply mx-auto w-[95%] max-w-[1740px];
   }
+
+  .skeleton-effect {
+    @apply bg-muted-foreground/30 inset-0 animate-pulse;
+  }
+
+  .skeleton-effect2 {
+    @apply bg-muted-foreground/30 animate-gradient inset-0;
+  }
+}
+
+@utility animate-gradient {
+  background: linear-gradient(135deg, var(--muted-foreground) 25%, var(--background) 50%, var(--muted-foreground) 75%);
+  background-size: 400% 100%;
+  animation: gradient 3s infinite;
+  animation-timing-function: ease-in-out;
+  opacity: 0.3;
+}
+
+.disable-cursor {
+  pointer-events: none;
+  -ms-user-select: none;
+  -moz-user-select: -moz-none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 /** Toast */

@@ -1,4 +1,4 @@
-import GridList from "../_components/GridList";
+import PostList from "../_components/PostList";
 
 export default function DesignerPage() {
   return (
@@ -6,7 +6,7 @@ export default function DesignerPage() {
       <div className="inner">
         <h2 className="font-classyvogue text-4xl">Product</h2>
         <article className="mt-10">
-          <GridList />
+          <PostList />
         </article>
       </div>
     </section>
