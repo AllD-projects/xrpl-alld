@@ -7,7 +7,15 @@ import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-const signupSchema = z.object({
+export type SignupFormData = {
+  email: string;
+  password: string;
+  displayName: string;
+  role: "USER" | "COMPANY";
+  companyName?: string;
+};
+
+export const signupSchema = z.object({
   email: z.email(),
   password: z.string().min(6),
   displayName: z.string().min(1),
