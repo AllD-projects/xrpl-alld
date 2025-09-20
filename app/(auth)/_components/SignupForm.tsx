@@ -70,7 +70,7 @@ export default function SignupForm() {
 
       const result = await response.json();
 
-      toast.success(`Welcome`);
+      toast.success(`Signup has been successfully completed`);
       router.push("/company");
     } catch {
       toast.error("An error occurred while signing up.");

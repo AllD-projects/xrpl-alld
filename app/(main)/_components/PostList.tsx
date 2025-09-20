@@ -90,8 +90,8 @@ export default function PostList() {
     <ul className="grid grid-cols-4 gap-3">
       {posts.map((post) => (
         <li key={post.id}>
-          <Link href={`/designer/product-detail/${post.id}`}>
-            <div className="aspect-[1/1.35] bg-gray-200">
+          <Link href={`/designer/${post.id}`}>
+            <div className="aspect-[1/1.35] border border-gray-300 bg-gray-300">
               {post.images.length > 0 && (
                 <img
                   src={post.images[0].imageUrl}

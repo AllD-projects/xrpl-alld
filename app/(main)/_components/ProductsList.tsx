@@ -102,8 +102,8 @@ export default function ProductsList() {
     <ul className="grid grid-cols-4 gap-3">
       {products.map((product) => (
         <li key={product.id}>
-          <Link href={`/designer/product-detail/${product.id}`}>
-            <div className="aspect-[1/1.35] bg-gray-200">
+          <Link href={`/company/${product.id}`}>
+            <div className="aspect-[1/1.35] border border-gray-300 bg-gray-300">
               {product.images.length > 0 && (
                 <img src={product.images[0].path} alt={product.title} className="h-full w-full object-cover" />
               )}
