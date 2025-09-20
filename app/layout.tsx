@@ -4,7 +4,7 @@ import { ReactNode } from "react";
 import "./globals.css";
 
 const roboto = localFont({
-  src: "./assets/fonts/RobotoVariable.woff",
+  src: "./assets/fonts/RobotoVariable.woff2",
   display: "swap",
   weight: "100 900",
   variable: "--font-roboto",

@@ -4,7 +4,13 @@
 @font-face {
   font-family: "Classyvogue";
   variable: "--font-classyvogue";
-  src: url("/src/assets/fonts/Classyvogueregular.woff") format("woff");
+  src: url("/src/assets/fonts/Classyvogueregular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "SUIT";
+  variable: "--font-suit";
+  src: url("/src/assets/fonts/SUIT.woff2") format("woff2");
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -124,5 +130,14 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer font-family {
+  .font-suit {
+    font-family: "SUIT", sans-serif;
+  }
+  .font-classyvogue {
+    font-family: "Classyvogue", serif;
   }
 }
